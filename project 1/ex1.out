@@ -1,0 +1,82 @@
+             CSIM Simulation Report (Version 20.0 for Linux x86-64)
+
+                                  M/M/1 Queue
+
+                           Fri Jan 27 13:13:01 2023
+
+
+                     Ending simulation time:     10041.661
+                     Elapsed simulation time:    10041.661
+                     CPU time used (seconds):        0.008
+
+
+FACILITY SUMMARY 
+
+facility     service    service          through-    queue     response   compl
+name           disc      time    util.     put       length      time     count
+--------------------------------------------------------------------------------
+facility     fcfs       0.99206  0.494    0.49793    0.99059    1.98943     5000
+
+
+
+TABLE 1:  resp tms
+
+      minimum         0.000145          mean                    1.989433
+      maximum        14.273079          variance                3.813342
+      range          14.272934          standard deviation      1.952778
+      observations        5000          coefficient of var      0.981575
+
+QTABLE 1:  num in sys
+
+      initial       0      minimum       0      mean                    0.990590
+      final         0      maximum      13      variance                1.937727
+      entries    5000      range        13      standard deviation      1.392022
+      exits      5000                           coeff of variation      1.405246
+
+                                             cumulative
+        number    total time    proportion   proportion
+
+             0    5081.38161     0.506030     0.506030   ********************
+             1    2426.95194     0.241688     0.747718   **********          
+             2    1238.22169     0.123308     0.871027   *****               
+             3     667.95025     0.066518     0.937545   ***                 
+             4     350.00001     0.034855     0.972399   *                   
+             5     152.62571     0.015199     0.987599   *                   
+             6      69.33696     0.006905     0.994504   .
+             7      25.09331     0.002499     0.997003   .
+             8       9.84005     0.000980     0.997982   .
+             9      10.69388     0.001065     0.999047   .
+ >=         10       9.56521     0.000953     1.000000   .
+
+
+
+
+			M/M/1 Theoretical Results
+
+
+		Inter-arrival time =      2.000
+		Service time       =      1.000
+		Utilization        =      0.500
+		Throughput rate    =      0.500
+		Mn nbr at queue    =      1.000
+		Mn queue length    =      0.500
+		Response time      =      2.000
+		Time in queue      =      1.000
+CSIM MODEL STATISTICS
+
+CPU time used (sec):         0.008 
+Events processed:            17485 
+Memory allocated:            23250 bytes 
+Calls to malloc:                43 
+Processes 
+     Started:                 5001 
+     Saved:                   9105 
+     Terminated:              5000 
+     High water mark:           14 
+Stacks 
+     Allocated:               5001 
+     High water mark:          346 words 
+     Average:                   24 words 
+     Maximum:                   25 words 
+     Current:                   21 words 
+

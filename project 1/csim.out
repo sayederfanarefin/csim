@@ -1,0 +1,84 @@
+
+   time       process    id   pri    status
+     0.000          sim   1     1    init facility facility with 1 server
+     0.000          sim   1     1    create event done (#1148a18)
+     0.000          sim   1     1    hold for 1.332
+     0.000          sim   1     1    sched proc: t = 1.332, id = 1
+     1.332          sim   1     1    sched proc: t = 0.000, id = 2
+     1.332          sim   1     1    hold for 3.477
+     1.332          sim   1     1    sched proc: t = 3.477, id = 1
+     1.332         cust   2     1    reserve facility facility
+     1.332         cust   2     1    hold for 1.176
+     1.332         cust   2     1    sched proc: t = 1.176, id = 2
+     2.507         cust   2     1    release facility facility
+     2.507         cust   2     1    terminate process
+     4.809          sim   1     1    sched proc: t = 0.000, id = 3
+     4.809          sim   1     1    hold for 1.253
+     4.809          sim   1     1    sched proc: t = 1.253, id = 1
+     4.809         cust   3     1    reserve facility facility
+     4.809         cust   3     1    hold for 0.054
+     4.809         cust   3     1    sched proc: t = 0.054, id = 3
+     4.863         cust   3     1    release facility facility
+     4.863         cust   3     1    terminate process
+     6.062          sim   1     1    sched proc: t = 0.000, id = 4
+     6.062          sim   1     1    hold for 3.524
+     6.062          sim   1     1    sched proc: t = 3.524, id = 1
+     6.062         cust   4     1    reserve facility facility
+     6.062         cust   4     1    hold for 0.353
+     6.062         cust   4     1    sched proc: t = 0.353, id = 4
+     6.415         cust   4     1    release facility facility
+     6.415         cust   4     1    terminate process
+     9.585          sim   1     1    sched proc: t = 0.000, id = 5
+     9.585          sim   1     1    hold for 2.971
+     9.585          sim   1     1    sched proc: t = 2.971, id = 1
+     9.585         cust   5     1    reserve facility facility
+     9.585         cust   5     1    hold for 0.704
+     9.585         cust   5     1    sched proc: t = 0.704, id = 5
+    10.289         cust   5     1    release facility facility
+    10.289         cust   5     1    terminate process
+    12.556          sim   1     1    sched proc: t = 0.000, id = 6
+    12.556          sim   1     1    wait event done (#1148a18)
+    12.556         cust   6     1    reserve facility facility
+    12.556         cust   6     1    hold for 2.082
+    12.556         cust   6     1    sched proc: t = 2.082, id = 6
+    14.638         cust   6     1    release facility facility
+    14.638         cust   6     1    set event done (#1148a18)
+    14.638          sim   1     1    recog2 evt done (#1148a18)
+    14.638         cust   6     1    sched proc: t = 0.000, id = 1
+    14.638         cust   6     1    terminate process
+             CSIM Simulation Report (Version 20.0 for Linux x86-64)
+
+                           Fri Jan 27 13:14:07 2023
+
+
+                     Ending simulation time:        14.638
+                     Elapsed simulation time:       14.638
+                     CPU time used (seconds):        0.000
+
+
+FACILITY SUMMARY 
+
+facility     service    service          through-    queue     response   compl
+name           disc      time    util.     put       length      time     count
+--------------------------------------------------------------------------------
+facility     fcfs       0.87363  0.298    0.34158    0.29842    0.87363        5
+
+
+
+    14.638          sim   1     1    sim exited
+    14.638          sim   1     1    rerun model
+     0.000          sim   1     1    delete all pcb's
+     0.000          sim   1     1    delete all events
+     0.000          sim   1     1    rtrn event done (#1148a18)
+     0.000          sim   1     1    delete all facilities
+     0.000          sim   1     1    rtrn facfacility (#11497a8)
+     0.000          sim   1     1    delete all storages
+
+   time       process    id   pri    status
+     0.000          sim   1     1    delete all mailboxes
+     0.000          sim   1     1    delete all meters
+     0.000          sim   1     1    delete all boxes
+     0.000          sim   1     1    delete all tables
+     0.000          sim   1     1    delete all qtables
+     0.000          sim   1     1    delete event list
+     0.000          sim   1     1    delete all classes

@@ -1,0 +1,109 @@
+Sample single round:
+
+ 2.000 node  0: timed out send new message - msg: type = req, from = 0, to = 3           
+ 2.000 node  1: timed out send new message - msg: type = req, from = 1, to = 2           
+ 2.000 node  2: timed out send new message - msg: type = req, from = 2, to = 3           from == node_number and type == req -> send a hello
+ 2.000 node  3: timed out send new message - msg: type = req, from = 3, to = 4           
+ 2.000 node  4: timed out send new message - msg: type = req, from = 4, to = 1           
+ 2.300 node  2: received msg - msg: type = req, from = 1, to = 2
+ 2.300 node  2: return request - msg: type = rep, from = 2, to = 1                        
+ 2.300 node  3: received msg - msg: type = req, from = 0, to = 3
+ 2.300 node  3: return request - msg: type = rep, from = 3, to = 0                        
+ 2.300 node  4: received msg - msg: type = req, from = 3, to = 4                         
+ 2.300 node  4: return request - msg: type = rep, from = 4, to = 3
+ 2.300 node  1: received msg - msg: type = req, from = 4, to = 1
+ 2.300 node  1: return request - msg: type = rep, from = 1, to = 4
+ 2.600 node  3: received msg - msg: type = req, from = 2, to = 3
+ 2.600 node  3: return request - msg: type = rep, from = 3, to = 2                      from == node_number and type == rep -> replies a hello_ack
+ 2.600 node  1: received msg - msg: type = rep, from = 2, to = 1
+ 2.600 node  1: receive reply - msg: type = rep, from = 2, to = 1
+ 2.600 node  0: received msg - msg: type = rep, from = 3, to = 0
+ 2.600 node  0: receive reply - msg: type = rep, from = 3, to = 0
+ 2.600 node  4: received msg - msg: type = rep, from = 1, to = 4
+ 2.600 node  4: receive reply - msg: type = rep, from = 1, to = 4
+ 2.900 node  3: received msg - msg: type = rep, from = 4, to = 3
+ 2.900 node  3: receive reply - msg: type = rep, from = 4, to = 3
+ 2.900 node  2: received msg - msg: type = rep, from = 3, to = 2
+ 2.900 node  2: receive reply - msg: type = rep, from = 3, to = 2                       to == node_number and type == req -> receives a hello_ack
+-----------------
+return request
+received msg
+receive reply
+------------------
+
+How it should be for the project:
+
+node.0 sends a Hello to node.3 at 100.2 seconds.
+node.2 replies a Hello_Ack to node.1 at 100.5 seconds
+...
+node.4 sends a Hello to node.3 at 110.5 seconds
+node.1 receives a Hello_Ack from node.2 at 110.6 seconds
+node.4 re-sends a Hello to node.3 at 112.5 seconds 
+
+
+Rephrased for a single one:
+node.0 sends a Hello to node.3 at 100.2 seconds.
+node.3 replies a Hello_Ack to node.0 at 100.5 seconds
+node.0 receives a Hello_Ack from node.3 at 110.6 seconds
+node.4 re-sends a Hello to node.3 at 112.5 seconds 
+
+No need to answer receives Hello.
+printf("node.%2ld: %s : type = %s, from = %ld, to = %ld  at %6.3f seconds\n", n, str, (m->type == REQUEST) ? "req" : "rep", m->from, m->to, clock);
+
+
+printf("%6.3f node %2ld: %s - msg: type = %s, from = %ld, to = %ld\n", clock, n, str, (m->type == REQUEST) ? "req" : "rep", m->from, m->to);
+
+
+
+-------------
+printf("%6.3f node %2ld: %s - msg: type = %s, from = %ld, to = %ld\n", clock, n, str, (m->type == REQUEST) ? "req" : "rep", m->from, m->to);
+
+"%6.3f node %2ld: %s - msg: type = %s,                            from = %ld, to = %ld\n"
+
+clock,         n, str     , (m->type == REQUEST) ? "req" : "rep", m->from,     m->to);
+
+-------------
+printf(
+
+"node.%2ld: %s   from = %ld, to = %ld  at %6.3f seconds\n"
+
+, n       , str,  m->from,   m->to,       clock);
+
+
+
+
+--------------------
+
+
+
+
+Sample single round:
+
+  
+ 2.000 node  2: timed out send new message - msg: type = req, from = 2, to = 3           from == node_number and type == req -> send a hello
+        
+ 2.600 node  3: received msg - msg: type = req, from = 2, to = 3                        to == node_number and type == req -> X
+ 2.600 node  3: return request - msg: type = rep, from = 3, to = 2                      from == node_number and type == rep and  (return request) -> replies a hello_ack
+ 
+ 2.900 node  2: received msg - msg: type = rep, from = 3, to = 2                        to == node_number and type == rep -> X
+ 2.900 node  2: receive reply - msg: type = rep, from = 3, to = 2                       to == node_number and type == req  and (receive reply) -> receives a hello_ack
+
+
+
+
+ received msg (x), return request, receive reply
+
+
+
+
+ node.0 receives a Hello_Ack from node.3 at 110.6 seconds
+
+ printf( "node.%2ld: %s from node.%ld  at %6.3f seconds\n", n, str, m->from, clock);
+
+
+
+
+ node.3 replies a Hello_Ack to node.0 at 100.5 seconds
+ from == node_number and type == rep and  (return request) -> replies a hello_ack
+
+  printf( "node.%2ld: %s from node.%ld  at %6.3f seconds\n", m->from, str, m->to, clock);
