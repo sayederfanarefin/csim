@@ -224,7 +224,7 @@ void send_msg(m, n)
 		 
 	st = timed_synchronous_send(node[to].input, m, TIME_OUT);
 
-	if (st != TIMED_OUT){
+	if (st == TIMED_OUT){
 
 
 
