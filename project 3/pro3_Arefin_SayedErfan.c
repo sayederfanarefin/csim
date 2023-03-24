@@ -43,20 +43,7 @@ double packetloss_probabiliity;
 
 long T_UPDATE;
 
-typedef struct msg *msg_t;
 
-
-struct msg
-{
-	long type;
-	long to;
-	long from;
-	TIME time_stamp;
-	msg_t link;
-	
-};
-
-msg_t msg_queue;
 
 
 
@@ -72,10 +59,26 @@ struct item
 	// long data[128];
 	long data;
 	int item_type;
-};
+} ;
 
 struct item serverDatabase[DB_SIZE];
 
+
+typedef struct msg *msg_t;
+
+
+struct msg
+{
+	long type;
+	long to;
+	long from;
+	TIME time_stamp;
+	msg_t link;
+	struct item itemm;
+	
+};
+
+msg_t msg_queue;
 
 struct clnt
 {
@@ -92,14 +95,14 @@ struct clnt
 struct clnt client[NUM_CLIENTS];
 
 
-struct srvr
+typedef struct srvr
 {
 	FACILITY cpu;
 	MBOX input;
 	
-};
+} server_i;
 
-
+server_i server_main;
 
 TABLE resp_tm;
 FILE *fp;
@@ -203,33 +206,41 @@ void init()
 
 	// server:
 
-
 	sprintf(str, "cpu srvr");
-	srvr.cpu = facility(str);
+	server_main.cpu = facility(str);
 	printf(str, "input srvr");
-	srvr.input = mailbox(str);
+	server_main.input = mailbox(str);
 
 
 	// initialize database
-		//hot 50
+	//hot 50
 	// cold 450
-	int i_db, i_dta;
+	int i_db;
 	for (i_db = 0; i_db <  DB_SIZE; i_db++){
-		item item_o = (item)do_malloc(sizeof(struct item));
-		item_o.item_id = i_db;
-		item_o.updated_time =  clock;
+		// item item_o = (item)do_malloc(sizeof(struct item));
+		// item_o.item_id = i_db;
+		// item_o.updated_time =  clock;
+		// if (i_db < HOT_DATA_ITEM_SIZE){
+		// 	item_o.item_type = ITEM_HOT;
+		// } else {
+		// 	item_o.item_type = ITEM_COLD;
+		// }
+
+		// // for (i_dta =0; i_dta < 128; i_dta++){
+		// // 	item_o.data[i_dta] = 2147483646;
+		// // }
+		// item_o.data = 2143646;
+
+
+		serverDatabase[i_db].data = 2143646;
+		serverDatabase[i_db].item_id = i_db;
+		serverDatabase[i_db].updated_time = clock;
 		if (i_db < HOT_DATA_ITEM_SIZE){
-			item_o.item_type = ITEM_HOT;
+			serverDatabase[i_db].item_type = ITEM_HOT;
 		} else {
-			item_o.item_type = ITEM_COLD;
+			serverDatabase[i_db].item_type = ITEM_COLD;
 		}
 
-		// for (i_dta =0; i_dta < 128; i_dta++){
-		// 	item_o.data[i_dta] = 2147483646;
-		// }
-		item_o.data[i_dta] = 2143646;
-
-		serverDatabase[i_db] = item_o;
 	}
 
 
@@ -334,7 +345,7 @@ void procServerReply()
 	{
 		msg_t m;
 		long s, t;
-		receive(srvr.input, &m); 
+		receive(server_main.input, &m); 
 		
 		if (m->type == MSG_REQUEST){
 
@@ -490,30 +501,30 @@ void my_report()
 }
 
 
-msg_t new_msg(from)
-long from;
-{
-	msg_t m;
-	long i;
-	if (msg_queue == NIL)
-	{
-		m = (msg_t)do_malloc(sizeof(struct msg));
-	}
-	else
-	{
-		m = msg_queue;
-		msg_queue = msg_queue->link;
-	}
+// msg_t new_msg(from)
+// long from;
+// {
+// 	msg_t m;
+// 	long i;
+// 	if (msg_queue == NIL)
+// 	{
+// 		m = (msg_t)do_malloc(sizeof(struct msg));
+// 	}
+// 	else
+// 	{
+// 		m = msg_queue;
+// 		msg_queue = msg_queue->link;
+// 	}
 
-	do
-	{
-		i = random(01, NUM_CLIENTS - 1);
-	} while (i == from);
+// 	do
+// 	{
+// 		i = random(01, NUM_CLIENTS - 1);
+// 	} while (i == from);
 
-	m->to = i;
-	m->from = from;
-	m->type = REQUEST;
-	m->time_stamp = clock;
-	// m->resent = 0;
-	return (m);
-}
+// 	m->to = i;
+// 	m->from = from;
+// 	m->type = REQUEST;
+// 	m->time_stamp = clock;
+// 	// m->resent = 0;
+// 	return (m);
+// }
