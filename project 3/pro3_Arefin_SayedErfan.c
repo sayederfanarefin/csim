@@ -23,7 +23,7 @@
 
 #define DB_SIZE 500
 #define CACHE_SIZE 100
-#define HOT_DATA_ITEM_SIZE 450
+#define HOT_DATA_ITEM_SIZE 50
 
 
 
@@ -31,8 +31,8 @@
 #define T_DELAY 0.2
 #define TRANS_TIME 0.1
 #define LOCAL_PROCESSING_DELAY 0.1
-#define REQUEST 1L
-#define REPLY 2L
+// #define REQUEST 1L
+// #define REPLY 2L
 #define TRACE 1
 #define MAX_RESENT_ALLOWED 1
 
@@ -43,11 +43,11 @@ double packetloss_probabiliity;
 
 long T_UPDATE;
 
+#define T_QUERY 2
 
 
-
-
-FACILITY network[NUM_CLIENTS][NUM_CLIENTS];
+// 0 for server
+FACILITY network[0][NUM_CLIENTS];
 
 
 struct item
@@ -114,7 +114,7 @@ void send_msg();
 void from_reply();
 void decode_msg();
 void return_msg();
-msg_t new_msg();
+msg_t clientQuery();
 
 
 void createQuery(long n);
@@ -217,21 +217,6 @@ void init()
 	// cold 450
 	int i_db;
 	for (i_db = 0; i_db <  DB_SIZE; i_db++){
-		// item item_o = (item)do_malloc(sizeof(struct item));
-		// item_o.item_id = i_db;
-		// item_o.updated_time =  clock;
-		// if (i_db < HOT_DATA_ITEM_SIZE){
-		// 	item_o.item_type = ITEM_HOT;
-		// } else {
-		// 	item_o.item_type = ITEM_COLD;
-		// }
-
-		// // for (i_dta =0; i_dta < 128; i_dta++){
-		// // 	item_o.data[i_dta] = 2147483646;
-		// // }
-		// item_o.data = 2143646;
-
-
 		serverDatabase[i_db].data = 2143646;
 		serverDatabase[i_db].item_id = i_db;
 		serverDatabase[i_db].updated_time = clock;
@@ -243,24 +228,49 @@ void init()
 
 	}
 
-
-
 	procServerUpdateItem();
 	procServerReply();
 }
 
 
-void checkCache(){
+int checkCache(m, n)
+msg_t m, long n;{
+	// reply 0 if not present in cache
+	// reply item index if present in cache
 
+	int i;
+	int found = 0;
+	for (i =0; i < CACHE_SIZE; i++){
+		if (client[n].client_cache[i].item_id == m->itemm.item_id){
+			found = i;
+			break;
+		}
+	}
+
+	return found;
+	
 }
 
-void createQuery(long n){
+/// @brief  todo
+void createQuery(n) long n;{
 
 	msg_t m;
 	long t;
-	m = new_msg(n);
+	m = clientQuery(n);
+
+	int cacheCheck = checkCache(m, n);
+
+	if (cacheCheck == 0){
+		send_msg(m);
+	} else {
+		
+		m->type = MSG_CHECK;
+		m->itemm.updated_time = client[n].client_cache[i].updated_time;
+		send_msg(m);
+	}
+
 	decode_msg("sends hello", m, n);		
-	send_msg(m);
+	
 	client[n].numberOfQuery = client[n].numberOfQuery + 1;
 
 	receive(client[n].input, &m);
@@ -285,9 +295,6 @@ void createQuery(long n){
 			decode_msg("***unexpected type", m, n);
 			break;
 		}
-
-
-
 
 }
 
@@ -331,10 +338,7 @@ void procServerUpdateItem()
 		}
 		
 		hold(T_UPDATE);
-
-		// createQuery(n, holdTime);
-		
-		
+			
 	}
 }
 
@@ -348,33 +352,50 @@ void procServerReply()
 		receive(server_main.input, &m); 
 		
 		if (m->type == MSG_REQUEST){
+			int item_id = m->itemm.item_id;
+			m->type = MSG_DATA;
+			m->itemm.item_id = serverDatabase[item_id].item_id;
+			m->itemm.updated_time = serverDatabase[item_id].updated_time;
+			m->itemm.data = serverDatabase[item_id].data;
+			m->itemm.item_type = serverDatabase[item_id].item_type;
+			from_reply(m);
+			send_msg(m);
 
 		} else if (m->type == MSG_CHECK){
+			int item_id = m->itemm.item_id;
+			TIME updated_time = m->itemm.updated_time;
+			// check if data is old or not
+			if (serverDatabase[item_id].updated_time > updated_time){
+				m->type = MSG_DATA;
+				m->itemm.item_id = serverDatabase[item_id].item_id;
+				m->itemm.updated_time = serverDatabase[item_id].updated_time;
+				m->itemm.data = serverDatabase[item_id].data;
+				m->itemm.item_type = serverDatabase[item_id].item_type;
+				from_reply(m);
+				send_msg(m);
 
+			} else {
+				m->type = MSG_CONFIRM;
+				from_reply(m);
+				send_msg(m);
+			}
 		}
 
 		else{
-
+			// do nothing
 		}
 		
 	}
 
 }
-
 void procClient(n) long n;
 {
 	
 	create("procClient");
 	while (clock < SIMTIME)
 	{
-
-		// hold(TIME_OUT);
-		// float holdTime = exponential(SEND_HELLO_PERIOD);
-		// hold(holdTime);
-
 		createQuery(n);
-		
-		
+		hold(T_QUERY);
 	}
 }
 
@@ -386,29 +407,28 @@ void send_msg(m)
 	from = m->from;
 	to = m->to;
 	use(client[from].cpu, T_DELAY);
-	reserve(network[from][to]);
-		
-	if (m->type == REQUEST){
-		 hold(TRANS_TIME);
-		send(client[to].input, m);	
-		
-	}else {
-		hold(LOCAL_PROCESSING_DELAY);
-		send(client[to].input, m);
-	}
-	
-		release(network[from][to]);
 
+	// check if to is server
+	if (to == -1){
+		reserve(network[0][from]);
+		send(server_main.input, m);	
+		release(network[0][from]);
+
+	} else if (from == -1 ){
+		reserve(network[0][to]);
+		send(client[to].input, m);	
+		release(network[0][to]);
+	}
 }
 
 
 
 
-msg_t new_msg(from)
+msg_t clientQuery(from)
 long from;
 {
 	msg_t m;
-	long i;
+	long to = -1; // -1 indicates server
 	if (msg_queue == NIL)
 	{
 		m = (msg_t)do_malloc(sizeof(struct msg));
@@ -419,16 +439,37 @@ long from;
 		msg_queue = msg_queue->link;
 	}
 
-	do
-	{
-		i = random(01, NUM_CLIENTS - 1);
-	} while (i == from);
-
 	m->to = i;
 	m->from = from;
-	m->type = REQUEST;
+	m->type = MSG_REQUEST;
 	m->time_stamp = clock;
-	// m->resent = 0;
+
+
+
+// 	hot/cold data item query:
+
+// x1 = uniform (0, 1)
+// x1 > 0.8 -> cold data item
+// x1 <= 0.8 -> hot data item
+
+// if hot data then, y1= uniform (1, 50), y1 is the item that needs to be queried. 
+	double x1 = uniform (0, 1);
+	if (x1 > 0.8){
+		// cold data item
+		m->itemm.item_type = ITEM_COLD;
+
+		// for cold data item type lets select any id, randomly
+		int y2 = random(50, DB_SIZE);
+		m->itemm.item_id = y2;
+
+	} else {
+		// hot data item
+		m->itemm.item_type = ITEM_HOT;
+
+		int y1= uniform (0, 49);
+		m->itemm.item_id = y1;
+	}
+	
 	return (m);
 }
 
@@ -447,7 +488,6 @@ void from_reply(m)
 	to = m->to;
 	m->from = to;
 	m->to = from;
-	m->type = REPLY;
 }
 
 void decode_msg(str, m, n) char *str;
@@ -501,30 +541,3 @@ void my_report()
 }
 
 
-// msg_t new_msg(from)
-// long from;
-// {
-// 	msg_t m;
-// 	long i;
-// 	if (msg_queue == NIL)
-// 	{
-// 		m = (msg_t)do_malloc(sizeof(struct msg));
-// 	}
-// 	else
-// 	{
-// 		m = msg_queue;
-// 		msg_queue = msg_queue->link;
-// 	}
-
-// 	do
-// 	{
-// 		i = random(01, NUM_CLIENTS - 1);
-// 	} while (i == from);
-
-// 	m->to = i;
-// 	m->from = from;
-// 	m->type = REQUEST;
-// 	m->time_stamp = clock;
-// 	// m->resent = 0;
-// 	return (m);
-// }

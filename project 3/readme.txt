@@ -92,7 +92,7 @@ x1 = uniform (0, 1)
 x1 > 0.8 -> cold data item
 x1 <= 0.8 -> hot data item
 
-if hot data then, y1= uniform (1, 50), y1 is the item that needs to be updated. 
+if hot data then, y1= uniform (1, 50), y1 is the item that needs to be queried. 
 
 
 cached data should have a timestamp for lastupdate time stamp.
