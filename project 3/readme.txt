@@ -127,3 +127,12 @@ for client 1, 2 , ..., n each will ahve its average cache hit. We need to averag
 
 Initially each client cache is empty. First 50 (atleast) query for each client will be a cache miss. 
 
+
+
+not similar to project 2
+
+
+client sleep/active -> bonus points
+generate query, receive reply, receive data, send query, check and save cache
+server update data, receive/reply requests
+

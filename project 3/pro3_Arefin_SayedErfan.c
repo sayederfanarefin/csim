@@ -6,8 +6,8 @@
 // #include "stdlib.h"
 #include "string.h"
 
-// atleast 5000 SIMTIME. It is recommended to double or triple it
-#define SIMTIME 15000.0
+// atleast 5000 SIMTIME. It is recommended to double or triple it 15000.0
+#define SIMTIME 1000.0
 #define NUM_CLIENTS 5L
 
 // message types:
@@ -42,12 +42,13 @@
 double packetloss_probabiliity;
 
 long T_UPDATE;
+long T_QUERY;
 
-#define T_QUERY 2
+// #define T_QUERY 0.01
 
 
 // 0 for server
-FACILITY network[0][NUM_CLIENTS];
+FACILITY network[NUM_CLIENTS];
 
 
 struct item
@@ -127,6 +128,7 @@ void procServerReply() ;
 
 void sim(int argc, char *argv[] )
 {
+	// printf("0. Starting..");
 	if( argc == 2 ) {
 		
 		sscanf(argv[1], "%lf", &packetloss_probabiliity);
@@ -134,6 +136,7 @@ void sim(int argc, char *argv[] )
 		if (packetloss_probabiliity < 1.0 ){
 			
 			if ( packetloss_probabiliity > 0.0){
+				// printf("Starting..");
 				create("sim");
 				init();
 				hold(SIMTIME);
@@ -161,24 +164,30 @@ void sim(int argc, char *argv[] )
 
 void init()
 {
+	T_UPDATE = 0.003;
+	T_QUERY = 0.01;
+	// printf("init..");
 	long i, j;
 	char str[24];
 	fp = fopen("xxx.out", "w");
 	set_output_file(fp);
-	max_facilities(NUM_CLIENTS * NUM_CLIENTS + NUM_CLIENTS);
-	max_servers(NUM_CLIENTS * NUM_CLIENTS + NUM_CLIENTS);
-	max_mailboxes(NUM_CLIENTS);
-	max_events(2 * NUM_CLIENTS * NUM_CLIENTS);
+	// printf("setting max..");
+	max_facilities(NUM_CLIENTS * NUM_CLIENTS + 1);
+	max_servers(NUM_CLIENTS * NUM_CLIENTS);
+	max_mailboxes(NUM_CLIENTS + 1);
+	max_events(4 * NUM_CLIENTS );
 	resp_tm = table("msg rsp tm");
 	msg_queue = NIL;
 
+
+	printf("client init loop..\n");
 
 
 	for (i = 0; i < NUM_CLIENTS; i++)
 	{
 		sprintf(str, "cpu %d", i);
 		client[i].cpu = facility(str);
-		printf(str, "input %d", i);
+		sprintf(str, "input %d", i);
 		client[i].input = mailbox(str);
 
 		client[i].numberOfQuery = 0;
@@ -189,32 +198,32 @@ void init()
 		// client[i].client_cache
 	}
 
+	printf("Creating facilities\n");
 	for (i = 0; i < NUM_CLIENTS; i++)
 	{
-		for (j = 0; j < NUM_CLIENTS; j++)
-		{
-			sprintf(str, "nt %d %d", i, j);
-			network[i][j] = facility(str);
-		}
+			sprintf(str, "nt %d", i);
+			network[i] = facility(str);
 	}
 
-	for (i = 0; i < NUM_CLIENTS; i++)
-	{
-		procClient(i);
-	}
+	
 
 
 	// server:
 
-	sprintf(str, "cpu srvr");
+	printf("Server creation\n");
+	sprintf(str, "cpusrvr");
 	server_main.cpu = facility(str);
-	printf(str, "input srvr");
+	sprintf(str, "inputsrvr");
+	
 	server_main.input = mailbox(str);
 
 
 	// initialize database
 	//hot 50
 	// cold 450
+
+	printf("Server Database\n");
+
 	int i_db;
 	for (i_db = 0; i_db <  DB_SIZE; i_db++){
 		serverDatabase[i_db].data = 2143646;
@@ -228,18 +237,27 @@ void init()
 
 	}
 
+	printf("Running client processes\n");
+	for (i = 0; i < NUM_CLIENTS; i++)
+	{
+		procClient(i);
+	}
+
+	
 	procServerUpdateItem();
+
+	
 	procServerReply();
 }
 
 
 int checkCache(m, n)
-msg_t m, long n;{
+msg_t m; long n;{
 	// reply 0 if not present in cache
 	// reply item index if present in cache
 
 	int i;
-	int found = 0;
+	int found = -1;
 	for (i =0; i < CACHE_SIZE; i++){
 		if (client[n].client_cache[i].item_id == m->itemm.item_id){
 			found = i;
@@ -251,8 +269,10 @@ msg_t m, long n;{
 	
 }
 
-/// @brief  todo
+
 void createQuery(n) long n;{
+
+	printf ("Client %d: Create query\n", n);
 
 	msg_t m;
 	long t;
@@ -260,16 +280,18 @@ void createQuery(n) long n;{
 
 	int cacheCheck = checkCache(m, n);
 
-	if (cacheCheck == 0){
+	printf ("Client %d: After check cache\n", n);
+
+	if (cacheCheck == -1){
 		send_msg(m);
 	} else {
-		
 		m->type = MSG_CHECK;
-		m->itemm.updated_time = client[n].client_cache[i].updated_time;
+		m->itemm.updated_time = client[n].client_cache[m->itemm.item_id].updated_time;
 		send_msg(m);
 	}
 
-	decode_msg("sends hello", m, n);		
+	// decode_msg("sends hello", m, n);	
+	printf ("Client %d: Sending query\n", n);
 	
 	client[n].numberOfQuery = client[n].numberOfQuery + 1;
 
@@ -278,21 +300,23 @@ void createQuery(n) long n;{
 		switch (t)
 		{
 		case MSG_CONFIRM:
-			from_reply(m);
-			decode_msg("replies a hello_ack", m, n);
+			printf ("Client %d: received MSG_CONFIRM\n", n);
+			// from_reply(m);
+			// decode_msg("replies a hello_ack", m, n);
 			
-			send_msg(m);
+			// send_msg(m);
 			break;
 
 		case MSG_DATA:
-			decode_msg("receives a hello_ack", m, n);
-			client[n].cache_hit = client[n].cache_hit + 1;
-			record(clock - m->time_stamp, resp_tm);
-			return_msg(m);
+			printf ("Client %d: received MSG_DATA\n", n);
+			// decode_msg("receives a hello_ack", m, n);
+			// client[n].cache_hit = client[n].cache_hit + 1;
+			// record(clock - m->time_stamp, resp_tm);
+			// return_msg(m);
 			break;
 
 		default:
-			decode_msg("***unexpected type", m, n);
+			// decode_msg("***unexpected type", m, n);
 			break;
 		}
 
@@ -300,6 +324,8 @@ void createQuery(n) long n;{
 
 
 void updateColdDataItem(){
+	// printf("Updating cold data item\n");
+
 	int ii;
 	for (ii = HOT_DATA_ITEM_SIZE; ii < DB_SIZE; ii++){
 		if (serverDatabase[ii].item_type == ITEM_COLD){
@@ -311,6 +337,7 @@ void updateColdDataItem(){
 }
 
 void update_hot_data_item(){
+	// printf("Updating hot data item\n");
 	int ii;
 	for (ii =0; ii < HOT_DATA_ITEM_SIZE; ii++){
 		if (serverDatabase[ii].item_type == ITEM_HOT){
@@ -323,7 +350,7 @@ void update_hot_data_item(){
 }
 void procServerUpdateItem()
 {
-	
+	printf("Running server item update process\n");
 	create("procServerUpdateItem");
 	while (clock < SIMTIME)
 	{
@@ -338,20 +365,30 @@ void procServerUpdateItem()
 		}
 		
 		hold(T_UPDATE);
+		
 			
 	}
+	
+	
 }
 
 void procServerReply() 
 {
+	printf("Running server process\n");
 	create("procServerReply");
 	while (clock < SIMTIME)
 	{
+		printf("Inside server process loop\n");
 		msg_t m;
 		long s, t;
 		receive(server_main.input, &m); 
 		
+		printf("server received something\n");
+
 		if (m->type == MSG_REQUEST){
+
+			printf("server received msg_request\n");
+			
 			int item_id = m->itemm.item_id;
 			m->type = MSG_DATA;
 			m->itemm.item_id = serverDatabase[item_id].item_id;
@@ -362,6 +399,7 @@ void procServerReply()
 			send_msg(m);
 
 		} else if (m->type == MSG_CHECK){
+			printf("server received msg_check\n");
 			int item_id = m->itemm.item_id;
 			TIME updated_time = m->itemm.updated_time;
 			// check if data is old or not
@@ -375,6 +413,7 @@ void procServerReply()
 				send_msg(m);
 
 			} else {
+				printf("server returns msg_confirm\n");
 				m->type = MSG_CONFIRM;
 				from_reply(m);
 				send_msg(m);
@@ -390,12 +429,18 @@ void procServerReply()
 }
 void procClient(n) long n;
 {
+	printf ("Client %d: creating process\n", n);
 	
 	create("procClient");
+	printf ("Client %d: ------- \n", n);
+	
 	while (clock < SIMTIME)
 	{
+		printf ("Client %d: Inside process\n", n);
 		createQuery(n);
+		printf ("Client %d: done querying......... next!\n", n);
 		hold(T_QUERY);
+		printf ("Client %d: done querying......... next!   after hold period T_QUERY\n", n);
 	}
 }
 
@@ -403,22 +448,27 @@ void send_msg(m)
 	msg_t m;
 {
 
+printf("--- send message\n");
 	long from, to;
 	from = m->from;
 	to = m->to;
-	use(client[from].cpu, T_DELAY);
+	// use(client[from].cpu, T_DELAY);
 
 	// check if to is server
 	if (to == -1){
-		reserve(network[0][from]);
+		printf ("to server");
+		// reserve(network[from]);
 		send(server_main.input, m);	
-		release(network[0][from]);
+		// release(network[from]);
 
 	} else if (from == -1 ){
-		reserve(network[0][to]);
+		printf ("from server");
+		// reserve(network[to]);
 		send(client[to].input, m);	
-		release(network[0][to]);
+		// release(network[to]);
 	}
+
+printf("--- done send message\n");
 }
 
 
@@ -439,7 +489,7 @@ long from;
 		msg_queue = msg_queue->link;
 	}
 
-	m->to = i;
+	m->to = to;
 	m->from = from;
 	m->type = MSG_REQUEST;
 	m->time_stamp = clock;
@@ -495,23 +545,23 @@ msg_t m;
 long n;
 {
 	// printf("%6.3f client %2ld: %s - msg: type = %s, from = %ld, to = %ld\n", clock, n, str, (m->type == REQUEST) ? "req" : "rep", m->from, m->to);
-	if ((m->to == n) && (m->type == REQUEST))
-	{
-		// printf( "client.%2ld: %s from client.%ld  at %6.3f seconds\n", n, str, m->from, clock);
-		printf("client.%2ld: %s from client.%ld at %6.3f seconds\n", m->to, str, m->from, clock);
-	}
-	else if ((m->from == n) && (m->type == REQUEST))
-	{
-		printf("client.%2ld: %s to client.%ld at %6.3f seconds\n", n, str, m->to, clock);
-	}
-	else if ((m->from == n) && (m->type != REQUEST))
-	{
-		printf("client.%2ld: %s to client.%ld at %6.3f seconds\n", n, str, m->to, clock);
-	}
-	else
-	{
-		//	 printf( "client.%2ld: %s from client.%ld  at %6.3f seconds\n", n, str, m->from, clock);
-	}
+	// if ((m->to == n) && (m->type == REQUEST))
+	// {
+	// 	// printf( "client.%2ld: %s from client.%ld  at %6.3f seconds\n", n, str, m->from, clock);
+	// 	printf("client.%2ld: %s from client.%ld at %6.3f seconds\n", m->to, str, m->from, clock);
+	// }
+	// else if ((m->from == n) && (m->type == REQUEST))
+	// {
+	// 	printf("client.%2ld: %s to client.%ld at %6.3f seconds\n", n, str, m->to, clock);
+	// }
+	// else if ((m->from == n) && (m->type != REQUEST))
+	// {
+	// 	printf("client.%2ld: %s to client.%ld at %6.3f seconds\n", n, str, m->to, clock);
+	// }
+	// else
+	// {
+	// 	//	 printf( "client.%2ld: %s from client.%ld  at %6.3f seconds\n", n, str, m->from, clock);
+	// }
 }
 
 void my_report()
