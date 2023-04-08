@@ -6,7 +6,7 @@
 #include "string.h"
 
 // atleast 5000 SIMTIME. It is recommended to double or triple it 15000.0
-double SIMTIME = 15000.0;
+double SIMTIME = 150000.0;
 #define NUM_CLIENTS 5L
 
 // message types:
