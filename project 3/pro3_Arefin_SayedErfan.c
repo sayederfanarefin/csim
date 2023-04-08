@@ -64,7 +64,6 @@ struct item
 
 struct item serverDatabase[DB_SIZE];
 
-
 typedef struct msg *msg_t;
 
 
@@ -90,8 +89,10 @@ struct clnt
 	double average_query_delay;
 
 	struct item client_cache[CACHE_SIZE];
+	long usedTime[CACHE_SIZE];
 	int cacheSize;
 };
+	
 
 struct clnt client[NUM_CLIENTS];
 
@@ -262,56 +263,108 @@ msg_t m; long n;{
 	return found;
 	
 }
+int checkLRU(n) long n;{
+	// get the index of the least recently used 
+	// long currentTime = clock;
+	long oldestTime = clock;
+	long oldestIndex = -1;
+	int i ;
+	for (i=0; i < CACHE_SIZE; i ++){
 
+		if (client[n].usedTime[i] < oldestTime){
+			oldestTime = client[n].usedTime[i];
+			oldestIndex = i;
+			
+		}
+	}
+
+	return oldestIndex;
+	
+}
+
+void queryDelay (n, queryTime) long n; long queryTime;{
+	long currentTime = clock;
+	long queryDelay = currentTime - queryTime;
+	client[n].average_query_delay = ((client[n].average_query_delay * ( client[n].numberOfQuery -1 )) + queryDelay) / client[n].numberOfQuery;
+
+}
 
 void createQuery(n) long n;{
-
-	// printf("Client %d: Create query\n", n);
 
 	msg_t m;
 	long t;
 	m = clientQuery(n);
 
+	long queryTime = clock;
+	
 	int cacheCheck = checkCache(m, n);
 
-	// printf("Client %d: After check cache\n", n);
-
 	if (cacheCheck == -1){
-
 		send_msg(m);
 		printf("Client %d: send MSG_REQUEST\n", n);
 	} else {
+
 		m->type = MSG_CHECK;
-		m->itemm.updated_time = client[n].client_cache[m->itemm.item_id].updated_time;
+		m->itemm.updated_time = client[n].client_cache[cacheCheck].updated_time;
+		
 		send_msg(m);
 		printf("Client %d: send MSG_CHECK\n", n);
 	}
 
-	// decode_msg("sends hello", m, n);	
-	// printf("Client %d: Sending query\n", n);
-	
 	client[n].numberOfQuery = client[n].numberOfQuery + 1;
+	
 
 	receive(client[n].input, &m);
 	t = m->type;
 		switch (t)
 		{
 		case MSG_CONFIRM:
-			// printf("Client %d: received MSG_CONFIRM\n", n);
-			// from_reply(m);
-			// decode_msg("replies a hello_ack", m, n);
 			
-			// send_msg(m);
 			printf("Client %d: received MSG_CONFIRM\n", n);
+			
+			// update recently used time
+			client[n].usedTime[cacheCheck] = clock;
+
+			client[n].cache_hit = client[n].cache_hit + 1;
+
+			queryDelay (n, queryTime);
+
 			break;
 
 		case MSG_DATA:
-			// printf("Client %d: received MSG_DATA\n", n);
-			// decode_msg("receives a hello_ack", m, n);
-			// client[n].cache_hit = client[n].cache_hit + 1;
-			// record(clock - m->time_stamp, resp_tm);
-			// return_msg(m);
+			
 			printf("Client %d: received MSG_DATA\n", n);
+			int cacheSize = client[n].cacheSize ;
+			if (cacheSize < CACHE_SIZE){
+				client[n].client_cache[cacheSize].item_id == m->itemm.item_id;
+				client[n].client_cache[cacheSize].updated_time == m->itemm.updated_time;
+				client[n].client_cache[cacheSize].data == m->itemm.data;
+				client[n].client_cache[cacheSize].item_type == m->itemm.item_type;
+
+				// update recently used time
+				client[n].usedTime[cacheCheck] = clock;
+
+				queryDelay (n, queryTime);
+
+			} else {
+				//run LRU
+				int cacheIndexCanBeReplaced = checkLRU(n);
+
+
+				client[n].client_cache[cacheIndexCanBeReplaced].item_id == m->itemm.item_id;
+				client[n].client_cache[cacheIndexCanBeReplaced].updated_time == m->itemm.updated_time;
+				client[n].client_cache[cacheIndexCanBeReplaced].data == m->itemm.data;
+				client[n].client_cache[cacheIndexCanBeReplaced].item_type == m->itemm.item_type;
+
+				// update recently used time
+				client[n].usedTime[cacheIndexCanBeReplaced] = clock;
+
+				printf("Client %d: ran LRU ----------- \n", n);
+
+				queryDelay (n, queryTime);
+
+			}
+
 			break;
 
 		default:
@@ -562,27 +615,33 @@ long n;
 
 void my_report()
 {
-	int totalHelloSent = 0;
-	int totalHelloAckReceived = 0;
+	int totalQueries = 0;
+	int totalCacheHit = 0;
+	double queryDelay = 0.0;
 
 	int i;
 	for (i = 0; i < NUM_CLIENTS; i++)
 	{
-		totalHelloSent = totalHelloSent + client[i].numberOfQuery;
-		totalHelloAckReceived = totalHelloAckReceived + client[i].cache_hit;
+		totalQueries = totalQueries + client[i].numberOfQuery;
+		totalCacheHit = totalCacheHit + client[i].cache_hit;
+		queryDelay = queryDelay + client[i].average_query_delay;
 		
 	}
 
 	// // printf("Total Hello Message sent: %d \n", totalHelloSent);
 	// // printf("Total Hello Ack Message received: %d \n", totalHelloAckReceived);
 
-	int totalMessageFailed = totalHelloSent - totalHelloAckReceived;
-	double averageSuccess = totalHelloAckReceived/NUM_CLIENTS;
-	double averageFailed = totalMessageFailed/NUM_CLIENTS;
 
-	// printf("Average number of successful transmissions: %lf \n", averageSuccess);
-	// printf("Average number of failed transmissions: %lf \n", averageFailed);
-	// printf("Packet loss probability: %lf \n", packetloss_probabiliity);
+	double averageTotalQueries = totalQueries/NUM_CLIENTS;
+
+	double averageTotalCacheHit = totalCacheHit/NUM_CLIENTS;
+
+	double averageQueryDelay = queryDelay/NUM_CLIENTS;
+
+
+	printf("Average number of total queries: %lf \n", averageTotalQueries);
+	printf("Average number of total cache hit: %lf \n", averageTotalCacheHit);
+	printf("Average query delay: %lf \n", averageQueryDelay);
 
 }
 
