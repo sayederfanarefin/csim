@@ -6,7 +6,7 @@
 #include "string.h"
 
 // atleast 5000 SIMTIME. It is recommended to double or triple it 15000.0
-double SIMTIME = 5000.0;
+double SIMTIME = 15000.0;
 #define NUM_CLIENTS 5L
 
 // message types:
@@ -27,7 +27,7 @@ double SIMTIME = 5000.0;
 
 double T_UPDATE;
 double T_QUERY;
-
+double T_DELAY = 1;
 // 0 for server
 FACILITY network[NUM_CLIENTS];
 
@@ -465,6 +465,7 @@ void procClient(n) long n;
 void send_msg(m)
 	msg_t m;
 {
+	hold(T_DELAY);
 
 // printf("--- send message\n");
 	long from, to;
