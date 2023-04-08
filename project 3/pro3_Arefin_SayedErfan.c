@@ -3,11 +3,10 @@
 
 #include "csim.h"
 #include "stdio.h"
-// #include "stdlib.h"
 #include "string.h"
 
 // atleast 5000 SIMTIME. It is recommended to double or triple it 15000.0
-#define SIMTIME 1000.0
+double SIMTIME = 5000.0;
 #define NUM_CLIENTS 5L
 
 // message types:
@@ -26,26 +25,8 @@
 #define HOT_DATA_ITEM_SIZE 50
 
 
-
-// #define TIME_OUT 2.0
-// #define T_DELAY 0.2
-// #define TRANS_TIME 0.1
-// #define LOCAL_PROCESSING_DELAY 0.1
-// #define REQUEST 1L
-// #define REPLY 2L
-// #define TRACE 1
-// #define MAX_RESENT_ALLOWED 1
-
-
-// #define SEND_HELLO_PERIOD 5
-
-double packetloss_probabiliity;
-
-long T_UPDATE;
-long T_QUERY;
-
-// #define T_QUERY 0.01
-
+double T_UPDATE;
+double T_QUERY;
 
 // 0 for server
 FACILITY network[NUM_CLIENTS];
@@ -114,11 +95,8 @@ void init();
 void my_report();
 void send_msg();
 void from_reply();
-void decode_msg();
 void return_msg();
 msg_t clientQuery();
-
-
 void createQuery(long n);
 void updateColdDataItem();
 void update_hot_data_item();
@@ -129,14 +107,17 @@ void procServerReply() ;
 
 void sim(int argc, char *argv[] )
 {
-	// // printf("0. Starting..");
-	if( argc == 2 ) {
-		
-		sscanf(argv[1], "%lf", &packetloss_probabiliity);
+	// param 1: T_UPDATE;
+	// param 2: T_QUERY;
 
-		if (packetloss_probabiliity < 1.0 ){
+	if( argc == 3 ) {
+		
+		sscanf(argv[1], "%lf", &T_UPDATE);
+		sscanf(argv[2], "%lf", &T_QUERY);
+
+		if (T_UPDATE > 0.1 ){
 			
-			if ( packetloss_probabiliity > 0.0){
+			if ( T_QUERY > 0.1){
 				// // printf("Starting..");
 				create("sim");
 				init();
@@ -146,40 +127,35 @@ void sim(int argc, char *argv[] )
 				free(msg_queue);
 
 			} else {
-				// printf("Packet loss probability should be greater than 0.\n");
+				printf("T_QUERY should be greater than 0.1.\n");
 			}
 
 		} else {
-			// printf("Packet loss probability should be less than 1.\n");
+			printf("T_UPDATE should be greater than 0.1.\n");
 		}
 	}
-	else if( argc > 2 ) {
-		// printf("Too many arguments supplied.\n");
+	else if( argc > 3 ) {
+		printf("Too many arguments supplied.\n");
 	}
 	else {
-		// printf("One argument expected.\n");
+		printf("Two arguments expected.\n");
 	}
 }
 
 void init()
 {
-	T_UPDATE = 0.003;
-	T_QUERY = 0.01;
-	// // printf("init..");
+
 	long i, j;
 	char str[24];
 	fp = fopen("xxx.out", "w");
 	set_output_file(fp);
-	// // printf("setting max..");
+	
 	max_facilities(NUM_CLIENTS * NUM_CLIENTS + 1);
 	max_servers(NUM_CLIENTS * NUM_CLIENTS);
 	max_mailboxes(NUM_CLIENTS + 1);
 	max_events(4 * NUM_CLIENTS );
 	resp_tm = table("msg rsp tm");
 	msg_queue = NIL;
-
-
-	// printf("client init loop..\n");
 
 
 	for (i = 0; i < NUM_CLIENTS; i++)
@@ -194,18 +170,14 @@ void init()
 		client[i].cacheSize = 0;
 		client[i].average_query_delay = 0.0;
 		
-		// client[i].client_cache
 	}
 
-	// printf("Creating facilities\n");
 	for (i = 0; i < NUM_CLIENTS; i++)
 	{
 			sprintf(str, "nt %d", i);
 			network[i] = facility(str);
 	}
 
-	// server:
-	// printf("Server creation\n");
 	sprintf(str, "cpusrvr");
 	server_main.cpu = facility(str);
 	sprintf(str, "inputsrvr");
@@ -238,10 +210,7 @@ void init()
 		procClient(i);
 	}
 
-	
 	procServerUpdateItem();
-
-	
 	procServerReply();
 }
 
@@ -345,6 +314,9 @@ void createQuery(n) long n;{
 				client[n].usedTime[cacheCheck] = clock;
 
 				queryDelay (n, queryTime);
+				// printf("Client %d: saved in cache ------------------------------------------------------- %d \n", n, cacheSize);
+
+				client[n].cacheSize = client[n].cacheSize + 1;
 
 			} else {
 				//run LRU
@@ -359,7 +331,7 @@ void createQuery(n) long n;{
 				// update recently used time
 				client[n].usedTime[cacheIndexCanBeReplaced] = clock;
 
-				printf("Client %d: ran LRU ----------- \n", n);
+				// printf("Client %d: ran LRU ------------------------------------------------------- \n", n);
 
 				queryDelay (n, queryTime);
 
@@ -368,12 +340,11 @@ void createQuery(n) long n;{
 			break;
 
 		default:
-			// decode_msg("***unexpected type", m, n);
+			printf("***unexpected type");
 			break;
 		}
 
 }
-
 
 void updateColdDataItem(){
 	// // printf("Updating cold data item\n");
@@ -384,7 +355,6 @@ void updateColdDataItem(){
 			serverDatabase[ii].data = zipf(ii);
 			serverDatabase[ii].updated_time = clock;
 		}
-		
 	}
 }
 
@@ -396,7 +366,6 @@ void update_hot_data_item(){
 			serverDatabase[ii].data = zipf(ii);
 			serverDatabase[ii].updated_time = clock;
 		}
-		
 	}
 
 }
@@ -429,12 +398,8 @@ void procServerReply()
 		long s, t;
 		receive(server_main.input, &m); 
 		
-		// printf("server received something\n");
 
 		if (m->type == MSG_REQUEST){
-
-			// printf("server received msg_request\n");
-			
 			int item_id = m->itemm.item_id;
 			m->type = MSG_DATA;
 			m->itemm.item_id = serverDatabase[item_id].item_id;
@@ -450,7 +415,11 @@ void procServerReply()
 			int item_id = m->itemm.item_id;
 			TIME updated_time = m->itemm.updated_time;
 			// check if data is old or not
-			if (serverDatabase[item_id].updated_time > updated_time){
+
+			// printf("Server end message check: received item updated time: %ld, actual updated time: %ld\n", updated_time, serverDatabase[item_id].updated_time);
+
+
+			if (serverDatabase[item_id].updated_time < updated_time){
 				m->type = MSG_DATA;
 				m->itemm.item_id = serverDatabase[item_id].item_id;
 				m->itemm.updated_time = serverDatabase[item_id].updated_time;
@@ -589,29 +558,8 @@ void from_reply(m)
 	m->to = from;
 }
 
-void decode_msg(str, m, n) char *str;
-msg_t m;
-long n;
-{
-	// // printf("%6.3f client %2ld: %s - msg: type = %s, from = %ld, to = %ld\n", clock, n, str, (m->type == REQUEST) ? "req" : "rep", m->from, m->to);
-	// if ((m->to == n) && (m->type == REQUEST))
-	// {
-	// 	// printf( "client.%2ld: %s from client.%ld  at %6.3f seconds\n", n, str, m->from, clock);
-	// 	// printf("client.%2ld: %s from client.%ld at %6.3f seconds\n", m->to, str, m->from, clock);
-	// }
-	// else if ((m->from == n) && (m->type == REQUEST))
-	// {
-	// 	// printf("client.%2ld: %s to client.%ld at %6.3f seconds\n", n, str, m->to, clock);
-	// }
-	// else if ((m->from == n) && (m->type != REQUEST))
-	// {
-	// 	// printf("client.%2ld: %s to client.%ld at %6.3f seconds\n", n, str, m->to, clock);
-	// }
-	// else
-	// {
-	// 	//	 printf( "client.%2ld: %s from client.%ld  at %6.3f seconds\n", n, str, m->from, clock);
-	// }
-}
+
+
 
 void my_report()
 {
@@ -639,9 +587,15 @@ void my_report()
 	double averageQueryDelay = queryDelay/NUM_CLIENTS;
 
 
+	printf("Total queries: %d \n", totalQueries);
+	printf("Total cache hit: %d \n", totalCacheHit);
+	printf("Query delay: %lf \n", queryDelay);
+
+
 	printf("Average number of total queries: %lf \n", averageTotalQueries);
 	printf("Average number of total cache hit: %lf \n", averageTotalCacheHit);
 	printf("Average query delay: %lf \n", averageQueryDelay);
+
 
 }
 
