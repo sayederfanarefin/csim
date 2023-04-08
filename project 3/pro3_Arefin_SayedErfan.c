@@ -27,7 +27,8 @@ double SIMTIME = 15000.0;
 
 double T_UPDATE;
 double T_QUERY;
-double T_DELAY = 1;
+double T_DELAY_LOAD = 1; // 1 sec for data transfer
+double T_DELAY_MSG = 0.001; // 1 sec for just message transfer
 // 0 for server
 FACILITY network[NUM_CLIENTS];
 
@@ -465,7 +466,11 @@ void procClient(n) long n;
 void send_msg(m)
 	msg_t m;
 {
-	hold(T_DELAY);
+	if (m->type == MSG_DATA){
+		hold(T_DELAY_LOAD);
+	} else {
+		hold(T_DELAY_MSG);
+	}
 
 // printf("--- send message\n");
 	long from, to;
