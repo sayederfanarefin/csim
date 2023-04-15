@@ -108,6 +108,8 @@ void procServerReply() ;
 
 void sim(int argc, char *argv[] )
 {
+	printf("-----------======================-------------\n");
+
 	// param 1: T_UPDATE;
 	// param 2: T_QUERY;
 
@@ -271,14 +273,14 @@ void createQuery(n) long n;{
 
 	if (cacheCheck == -1){
 		send_msg(m);
-		printf("Client %d: send MSG_REQUEST\n", n);
+		//printf("Client %d: send MSG_REQUEST\n", n);
 	} else {
 
 		m->type = MSG_CHECK;
 		m->itemm.updated_time = client[n].client_cache[cacheCheck].updated_time;
 		
 		send_msg(m);
-		printf("Client %d: send MSG_CHECK\n", n);
+		//printf("Client %d: send MSG_CHECK\n", n);
 	}
 
 	client[n].numberOfQuery = client[n].numberOfQuery + 1;
@@ -290,7 +292,7 @@ void createQuery(n) long n;{
 		{
 		case MSG_CONFIRM:
 			
-			printf("Client %d: received MSG_CONFIRM\n", n);
+			//printf("Client %d: received MSG_CONFIRM\n", n);
 			
 			// update recently used time
 			client[n].usedTime[cacheCheck] = clock;
@@ -302,41 +304,49 @@ void createQuery(n) long n;{
 			break;
 
 		case MSG_DATA:
-			
-			printf("Client %d: received MSG_DATA\n", n);
-			int cacheSize = client[n].cacheSize ;
-			if (cacheSize < CACHE_SIZE){
-				client[n].client_cache[cacheSize].item_id == m->itemm.item_id;
-				client[n].client_cache[cacheSize].updated_time == m->itemm.updated_time;
-				client[n].client_cache[cacheSize].data == m->itemm.data;
-				client[n].client_cache[cacheSize].item_type == m->itemm.item_type;
 
-				// update recently used time
-				client[n].usedTime[cacheCheck] = clock;
-
-				queryDelay (n, queryTime);
-				// printf("Client %d: saved in cache ------------------------------------------------------- %d \n", n, cacheSize);
-
-				client[n].cacheSize = client[n].cacheSize + 1;
+			if (cacheCheck == -1){
+				// MSG_DATA for MSG_REQUEST
+				//printf("Client %d: received MSG_DATA\n", n);
+				int cacheSize = client[n].cacheSize;
+				if (cacheSize < CACHE_SIZE){
+					client[n].client_cache[cacheSize].item_id == m->itemm.item_id;
+					client[n].client_cache[cacheSize].updated_time == m->itemm.updated_time;
+					client[n].client_cache[cacheSize].data == m->itemm.data;
+					client[n].client_cache[cacheSize].item_type == m->itemm.item_type;
+					// update recently used time
+					client[n].usedTime[cacheCheck] = clock;
+					queryDelay (n, queryTime);
+					client[n].cacheSize = client[n].cacheSize + 1;
+				} else {
+					//run LRU
+					int cacheIndexCanBeReplaced = checkLRU(n);
+					client[n].client_cache[cacheIndexCanBeReplaced].item_id == m->itemm.item_id;
+					client[n].client_cache[cacheIndexCanBeReplaced].updated_time == m->itemm.updated_time;
+					client[n].client_cache[cacheIndexCanBeReplaced].data == m->itemm.data;
+					client[n].client_cache[cacheIndexCanBeReplaced].item_type == m->itemm.item_type;
+					// update recently used time
+					client[n].usedTime[cacheIndexCanBeReplaced] = clock;
+					queryDelay (n, queryTime);
+				}
 
 			} else {
-				//run LRU
-				int cacheIndexCanBeReplaced = checkLRU(n);
-
-
-				client[n].client_cache[cacheIndexCanBeReplaced].item_id == m->itemm.item_id;
-				client[n].client_cache[cacheIndexCanBeReplaced].updated_time == m->itemm.updated_time;
-				client[n].client_cache[cacheIndexCanBeReplaced].data == m->itemm.data;
-				client[n].client_cache[cacheIndexCanBeReplaced].item_type == m->itemm.item_type;
-
+				// MSG_DATA for invalid data
+				client[n].client_cache[cacheCheck].item_id == m->itemm.item_id;
+				client[n].client_cache[cacheCheck].updated_time == m->itemm.updated_time;
+				client[n].client_cache[cacheCheck].data == m->itemm.data;
+				client[n].client_cache[cacheCheck].item_type == m->itemm.item_type;
 				// update recently used time
-				client[n].usedTime[cacheIndexCanBeReplaced] = clock;
-
-				// printf("Client %d: ran LRU ------------------------------------------------------- \n", n);
-
+				client[n].usedTime[cacheCheck] = clock;
 				queryDelay (n, queryTime);
 
+
+				// The number of queries and cache hits should be re-initialized to zero when you remove the cold state.  
+				client[n].cache_hit = 0;
+				client[n].numberOfQuery = 0;
 			}
+			
+			
 
 			break;
 
@@ -384,7 +394,7 @@ void procServerUpdateItem()
 			// update -> hot data item
 			update_hot_data_item();
 		}
-		hold(T_UPDATE);	
+		hold(exponential(T_UPDATE));	
 	}
 }
 
@@ -409,7 +419,7 @@ void procServerReply()
 			m->itemm.item_type = serverDatabase[item_id].item_type;
 			from_reply(m);
 			send_msg(m);
-			printf("Server: replied MSG_DATA\n");
+			//printf("Server: replied MSG_DATA\n");
 
 		} else if (m->type == MSG_CHECK){
 			// printf("server received msg_check\n");
@@ -428,14 +438,14 @@ void procServerReply()
 				m->itemm.item_type = serverDatabase[item_id].item_type;
 				from_reply(m);
 				send_msg(m);
-				printf("Server: replied MSG_DATA\n");
+				//printf("Server: replied MSG_DATA\n");
 
 			} else {
 				// printf("server returns msg_confirm\n");
 				m->type = MSG_CONFIRM;
 				from_reply(m);
 				send_msg(m);
-				printf("Server: replied MSG_CONFIRM\n");
+				//printf("Server: replied MSG_CONFIRM\n");
 			}
 		}
 
@@ -458,7 +468,7 @@ void procClient(n) long n;
 		// printf("Client %d: Inside process\n", n);
 		createQuery(n);
 		// printf("Client %d: done querying......... next!\n", n);
-		hold(T_QUERY);
+		hold(exponential(T_QUERY));
 		// printf("Client %d: done querying......... next!   after hold period T_QUERY\n", n);
 	}
 }
@@ -467,9 +477,9 @@ void send_msg(m)
 	msg_t m;
 {
 	if (m->type == MSG_DATA){
-		hold(T_DELAY_LOAD);
+		hold(exponential(T_DELAY_LOAD));
 	} else {
-		hold(T_DELAY_MSG);
+		hold(exponential(T_DELAY_MSG));
 	}
 
 // printf("--- send message\n");
@@ -564,7 +574,17 @@ void from_reply(m)
 	m->to = from;
 }
 
-
+int file_exists(const char *filename)
+{
+    FILE *fp = fopen(filename, "r");
+    int is_exist = 0;
+    if (fp != NULL)
+    {
+        is_exist = 1;
+        fclose(fp); // close the file
+    }
+    return is_exist;
+}
 
 
 void my_report()
@@ -602,7 +622,26 @@ void my_report()
 	printf("Average number of total cache hit: %lf \n", averageTotalCacheHit);
 	printf("Average query delay: %lf \n", averageQueryDelay);
 
+  	FILE *fp;
 
+	
+
+	char *filename = "results.csv";
+	int file_result = file_exists(filename);
+
+	fp = fopen(filename, "a+");
+
+
+	if (file_result == 0){
+		fprintf(fp, "t_update, t_query, avg_total_queries, avg_total_cache_hit, " "cahce_hit_ratio, avg_query_delay\n");
+	}
+
+	
+	fprintf(fp, "%lf, %lf, %lf, %lf, %lf, %lf\n", T_UPDATE, T_QUERY,
+			averageTotalQueries, averageTotalCacheHit,
+			 (averageTotalCacheHit/ averageTotalQueries) * 100, averageQueryDelay);
+	// fputs("This is testing for fputs...\n", fp);
+	fclose(fp);
 }
 
 

@@ -136,3 +136,6 @@ client sleep/active -> bonus points
 generate query, receive reply, receive data, send query, check and save cache
 server update data, receive/reply requests
 
+
+scp pro3_Arefin_SayedErfan.c saarefin@willow.cs.ttu.edu:/home/TTU/saarefin/mobile_data_privacy/project3
+scp saarefin@willow.cs.ttu.edu:/home/TTU/saarefin/mobile_data_privacy/project3/results.csv results.csv
