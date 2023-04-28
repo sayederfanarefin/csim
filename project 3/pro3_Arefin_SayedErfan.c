@@ -6,7 +6,7 @@
 #include "string.h"
 
 // atleast 5000 SIMTIME. It is recommended to double or triple it 15000.0
-double SIMTIME = 10000.0;
+double SIMTIME = 100000.0;
 // #define NUM_CLIENTS 2L
 #define NUM_CLIENTS 5L
 
@@ -209,7 +209,7 @@ void init()
 			serverDatabase[i_db].item_type = ITEM_COLD;
 		}
 		hold(0.001);
-		printf ("db-updated[%d]=  %lf\n", i_db, serverDatabase[i_db].updated_time );
+		// printf ("db-updated[%d]=  %lf\n", i_db, serverDatabase[i_db].updated_time );
 
 	}
 	
