@@ -362,10 +362,10 @@ void createQuery(n) long n;{
 					client[n].client_cache[cacheSize].data = m->itemm.data;
 					client[n].client_cache[cacheSize].item_type = m->itemm.item_type;
 
-					// TIME ttt = clock;
-					// memcpy(&client[n].usedTime[cacheCheck], &ttt, sizeof(TIME));
+					// // TIME ttt = clock;
+					// // memcpy(&client[n].usedTime[cacheCheck], &ttt, sizeof(TIME));
 
-					client[n].usedTime[cacheCheck] = clock;
+					client[n].usedTime[cacheSize] = clock;
 					queryDelay (n, queryTime);
 					client[n].cacheSize = client[n].cacheSize + 1;
 					hold(0.001);
@@ -392,8 +392,8 @@ void createQuery(n) long n;{
 						client[n].cache_hit = 0;
 						client[n].numberOfQuery = 0;
 						client[n].average_query_delay = 0.0;
-						printUsedTime(n);
-						printCache(n);
+						// printUsedTime(n);
+						// printCache(n);
 					} 
 				}
 
